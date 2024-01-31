@@ -29,6 +29,10 @@ var bioma = 'Cerrado';
 var biomes_vec = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas-2019')
   .filter(ee.Filter.eq('Bioma', bioma));
 
+// read states to compute statsitics
+var territory = ee.Image('projects/mapbiomas-workspace/AUXILIAR/estados-2016-raster')
+  .clip(biomes_vec);
+
 // get sentinel data 
 var collection_s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
   .filterBounds(biomes_vec)
@@ -274,31 +278,90 @@ years.forEach(function(year_i) {
         temp_img = temp_img.addBands(s2Gain);
     });
     
+    // export statistics 
     if (exportStats === true) {
       // build recipe
       var recipe = ee.FeatureCollection([]);
+      
       // compute areas
-      temp_img.bandNames().getInfo().forEach(function(param_ijk) {
-      
-      
-      
-      
-      
-    });
+      temp_img.bandNames().getInfo().forEach(function(stringName) {
+        
+        // Geometry to export
+        var geometry = source.geometry();
+        
+        // convert a complex object to a simple feature collection 
+        var convert2table = function (obj) {
+          obj = ee.Dictionary(obj);
+            var territory = obj.get('territory');
+            var classesAndAreas = ee.List(obj.get('groups'));
+            
+            var tableRows = classesAndAreas.map(
+                function (classAndArea) {
+                    classAndArea = ee.Dictionary(classAndArea);
+                    var classId = classAndArea.get('class');
+                    var area = classAndArea.get('sum');
+                    var tableColumns = ee.Feature(null)
+                        .set('state', territory)
+                        .set('class', classId)
+                        .set('area', area)
+                        .set('year', year_i)
+                        .set('month', month_j)
+                    return tableColumns;
+                }
+            );
+        
+            return ee.FeatureCollection(ee.List(tableRows));
+        };
+        
+        // compute the area
+        var calculateArea = function (image, territory, geometry) {
+            var territotiesData = pixelArea.addBands(territory).addBands(image)
+                .reduceRegion({
+                    reducer: ee.Reducer.sum().group(1, 'class').group(1, 'territory'),
+                    geometry: geometry,
+                    scale: scale,
+                    maxPixels: 1e12
+                });
+                
+            territotiesData = ee.List(territotiesData.get('groups'));
+            var areas = territotiesData.map(convert2table);
+            areas = ee.FeatureCollection(areas).flatten();
+            return areas;
+        };
+        
+      // perform per year 
+        var areas = bands.map(
+            function (band_i) {
+                var image = source.select(band_i)
+                
+                var areas = calculateArea(image, territory, geometry);
+                // set additional properties
+                areas = areas.map(
+                    function (feature) {
+                        return feature.set('bandName', band_i)
+                                      .set('parameter', image.get('parameter'))
+                                      .set('paramId', image.get('value'));
+                    }
+                );
+                return areas;
+            }
+        );
+        
+        // apply function
+        areas = ee.FeatureCollection(areas).flatten();
+        // store
+        recipe = recipe.merge(areas);
+        
+        // export all parameters for a year~month in a unique CSV
+        
+        // export 
+        Export.table.toDrive({
+              collection: recipe,
+              description: 'watercalib_' + year_i + '_' + month_j,
+              folder: driverFolder,
+              fileFormat: 'CSV'
+        });
+      }); 
     }
-    
-
-    
   });
 });
-
-
-
-
-// read states 
-//var states = ee.Image('projects/mapbiomas-workspace/AUXILIAR/estados-2016-raster');
-//var biomes = ee.Image('projects/mapbiomas-workspace/AUXILIAR/biomas-2019-raster');
-
-// get territories in which statistics will be processed (set biome id here)
-//var territory = states.updateMask(biomes.eq(biome_id));
-//Map.addLayer(territory.randomVisualizer(), {}, 'territory', false);
