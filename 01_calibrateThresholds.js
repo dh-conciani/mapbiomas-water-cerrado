@@ -295,7 +295,7 @@ years.forEach(function(year_i) {
       var recipe = ee.FeatureCollection([]);
       
       // Geometry to export
-      var geometry = water.geometry();
+      var geometry = biomes_vec.geometry();
         
       // convert a complex object to a simple feature collection 
       var convert2table = function (obj) {
