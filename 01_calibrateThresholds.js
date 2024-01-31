@@ -1,6 +1,9 @@
 // export statistics to calibrate mapbiomas agua sentinel-landsat integration  
 // an adaptation of dhemerson.costa@ipam.org.br from bruno@imazon.org.br codes
 
+// you want to exprt statistics? (using multiple params/yearsd/months can crash your code)
+var exportStats = true;
+
 // set calibration parameters
 //var loss_s2 = [-1, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1];
 var loss_s2 = [-0.3];
@@ -245,8 +248,8 @@ years.forEach(function(year_i) {
         .rename('loss');
         
       // apply spatial filter
-      s2Loss = s2Loss.where(s2Change.gt(-0.15), 0);
-      s2Loss = spatialFilter(s2Loss.unmask(), filterParams);
+      //s2Loss = s2Loss.where(s2Change.gt(-0.15), 0);
+      //s2Loss = spatialFilter(s2Loss.unmask(), filterParams);
         
       Map.addLayer(s2Loss, {palette:['red']}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk, false);
 
@@ -271,8 +274,21 @@ years.forEach(function(year_i) {
         temp_img = temp_img.addBands(s2Gain);
     });
     
-    // now, compute areas 
-    // first, get bandNames 
+    if (exportStats === true) {
+      // build recipe
+      var recipe = ee.FeatureCollection([]);
+      // compute areas
+      temp_img.bandNames().getInfo().forEach(function(param_ijk) {
+      
+      
+      
+      
+      
+    });
+    }
+    
+
+    
   });
 });
 
