@@ -2,12 +2,12 @@
 // dhemerson.costa@ipam.org.br 
 
 // set calibration parameters
-var loss_s2 = -0.30;
-var gain_s2 = 0.50;
+var loss_s2 = [-0.30];
+var gain_s2 = [0.50];
 
 // set years
 //var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023];
-var years = [2022];
+var years = [2023];
 
 // set months
 //var months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
@@ -141,7 +141,6 @@ years.forEach(function(year_i) {
       .filter("year == " + year_i).select("classification_" + month_j)
       .filter(ee.Filter.eq("biome", bioma.toUpperCase())).sum()
       .gt(0);
-      Map.addLayer(water)
     
     // read L8 
     var L8_ij =  collection_L8
@@ -159,8 +158,37 @@ years.forEach(function(year_i) {
                   .map(membership)
                   .median();
     
-    print(s2_ij)
+        // read s2
+    var s2_ijk = collection_s2
+      .filterDate(ee.Date.fromYMD(year_i-1, ee.Number.parse(month_j), 1),
+                  ee.Date.fromYMD(year_i-1, ee.Number.parse(month_j), 1).advance(1,'month'))                         
+                  .map(maskS2clouds)
+                  .map(sma)
+                  .map(membership)
+                  .median();
+    
+    // get change in S2 among years
+    var s2Change = s2_ij.select('SWSC')
+                    .subtract(s2_ijk.select('SWSC'))
+                    .rename('SWSC Change');
+    
+    
+    // get different among l8 method and s2
+    Map.addLayer(water, {}, 'L8 ' + year_i + ' - ' + month_j);
+    //Map.addLayer(s2Change, {}, 'S2 ' + year_i + ' - ' + month_j);
                   
+    // apply thresholds over s2 deltas 
+    // for each loss paramenters
+    // set loss recipe
+    var recipe_loss_temp = ee.FeatureCollection([]);
+    loss_s2.forEach(function(loss_ijk) {
+      var s2Loss = s2Change.lte(loss_ijk).selfMask().updateMask(water);
+      
+      Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk)
+
+    });
+
+    //var s2Gain = swscChange.gte(thrs_gain_s2).selfMask().updateMask(hand_class.lte(1));
     
     
 
