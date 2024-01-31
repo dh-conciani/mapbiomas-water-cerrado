@@ -137,6 +137,54 @@ var membership = function (image){
 };
 
 
+// set spatial filters
+var maxSize = 10;
+var filterParams = [
+    {
+        'classValue': 0,
+        'maxSize': maxSize
+    },
+    {
+        'classValue': 1,
+        'maxSize': maxSize
+    }
+];
+
+
+var _majorityFilter = function (image, params) {
+    // Generate a mask from the class value
+    var classMask = image.eq(params.classValue);
+
+    // Labeling the group of pixels until 50 pixels connected
+    var labeled = classMask.mask(classMask).connectedPixelCount(50, true);
+
+    // Select some groups of connected pixels
+    var region = labeled.lt(params.maxSize);
+
+    // Squared kernel with size shift 1
+    // [[p(x-1,y+1), p(x,y+1), p(x+1,y+1)]
+    // [ p(x-1,  y), p( x,y ), p(x+1,  y)]
+    // [ p(x-1,y-1), p(x,y-1), p(x+1,y-1)]
+    var kernel = ee.Kernel.square(2);
+
+    // Find neighborhood
+    var neighs = image.neighborhoodToBands(kernel).mask(region);
+
+    // Reduce to majority pixel in neighborhood
+    var majority = neighs.reduce(ee.Reducer.mode());
+
+    // Replace original values for new values
+    var filtered = image.where(region, majority);
+    return filtered.byte();
+};
+
+var spatialFilter = function (image, filterParams) {
+    for (var params in filterParams) {
+        image = _majorityFilter(image, filterParams[params]);
+    }
+    return image;
+};    
+
 // compute statistics
 // for each year 
 years.forEach(function(year_i) {
@@ -196,10 +244,13 @@ years.forEach(function(year_i) {
         .set({'value': loss_ijk})
         .rename('loss');
         
-        Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk, false);
+      // apply spatial filter
+      s2Loss = spatialFilter(s2Loss.unmask(), filterParams);
+        
+      Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk, false);
 
-        // store
-        temp_img = temp_img.addBands(s2Loss);
+      // store
+      temp_img = temp_img.addBands(s2Loss);
     });
     
     // for each gain parameters
@@ -219,8 +270,9 @@ years.forEach(function(year_i) {
         temp_img = temp_img.addBands(s2Gain);
     });
     
-    //var s2Gain = swscChange.gte(thrs_gain_s2).selfMask().updateMask(hand_class.lte(1));
     
+    
+
     
 
     
