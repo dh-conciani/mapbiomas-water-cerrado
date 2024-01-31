@@ -286,7 +286,7 @@ years.forEach(function(year_i) {
       var scale = 30;
       
       // define a Google Drive output folder 
-      var driverFolder = 'PIXEL-SOURCE';
+      var driverFolder = 'WATER-CALIB';
                       
       // Image area in hectares
       var pixelArea = ee.Image.pixelArea().divide(10000);
