@@ -50,15 +50,41 @@ var gaussianKernel = ee.Kernel.gaussian(3, 2, 'pixels', true, 2);
 var srtmBrasil = ee.Image('USGS/SRTMGL1_003').select("elevation");
 var terrain = ee.call('Terrain', srtmBrasil.convolve(gaussianKernel));
 
+function radians(img) { return img.toFloat().multiply(3.1415927).divide(180); }
+var slope = radians(terrain.select(['slope'])).lt(0.076).clip(biomes_vec.geometry());
+slope = slope.focal_max(pmtro_focal).focal_min(pmtro_focal);
 
-//Map.addLayer(collection_S2)
-//print(collection_S2.size())
-//Map.addLayer(biomes.updateMask(biomes.eq(biome_id)).geometry())
+// set s2 cloud mask function
+var maskS2clouds = function (image) {
+    var cloudProb = image.select('MSK_CLDPRB');
+    // var snowProb = image.select('MSK_SNWPRB');
+    var cloud = cloudProb.eq(0);
+    var scl = image.select('SCL'); 
+    var shadow = scl.eq(3); // 3 = cloud shadow
+    var cirrus = scl.eq(10); // 10 = cirrus
+    // Cloud probability less than 10% or cloud shadow classification
+    var mask = cloud.and(cirrus.neq(1)).and(shadow.neq(1));
+    return image.updateMask(mask);
+};
+
+// Function to cloud mask from the pixel_qa band of Landsat 8 SR data.
+var maskL8sr = function (image) {
+    // Bits 3 and 5 are cloud shadow and cloud, respectively.
+    var cloudShadowBitMask = 1 << 3;
+    var cloudsBitMask = 1 << 5;
+
+    // Get the pixel QA band.
+    var qa = image.select('QA_PIXEL');
+
+    // Both flags should be set to zero, indicating clear conditions.
+    var mask = qa.bitwiseAnd(cloudShadowBitMask).eq(0)
+                .and(qa.bitwiseAnd(cloudsBitMask).eq(0));
+
+    // Return the masked image.
+    return image.updateMask(mask);
+};
 
 
-
-print(collection_L8)
-print(collection_s2)
 
 565504
 
