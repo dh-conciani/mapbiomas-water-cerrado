@@ -313,7 +313,7 @@ years.forEach(function(year_i) {
                       .set('class', classId)
                       .set('area', area)
                       .set('year', year_i)
-                      .set('month', month_j)
+                      .set('month', month_j);
                   return tableColumns;
               }
           );
@@ -341,7 +341,7 @@ years.forEach(function(year_i) {
       // perform per year 
       var areas = temp_img.bandNames().map(
             function (band_i) {
-              var image = temp_img.select(ee.List(band_i))
+              var image = temp_img.select([band_i])
               
               var areas = calculateArea(image, territory, geometry);
               // set additional properties
@@ -362,8 +362,6 @@ years.forEach(function(year_i) {
       recipe = recipe.merge(areas);
       
       // export all parameters for a year~month in a unique CSV
-      
-      // export 
       Export.table.toDrive({
             collection: recipe,
             description: 'waterCalib_' + year_i + '_' + month_j,
