@@ -1,7 +1,7 @@
 // export statistics to calibrate mapbiomas agua sentinel-landsat integration  
 // an adaptation of dhemerson.costa@ipam.org.br from bruno@imazon.org.br codes
 
-// you want to exprt statistics? (per month~year)
+// export statistics? (per month~year)
 var exportStats = true;
 
 // set calibration parameters
