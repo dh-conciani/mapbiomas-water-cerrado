@@ -93,7 +93,41 @@ function applyScaleFactors(image) {
     return image.addBands(opticalBands, null, true)
                 .addBands(thermalBands, null, true);
 }
-  
+
+// set spectral mixture analisys function 
+var sma = function (image) {
+      
+    var outBandNames = ['gv', 'npv', 'soil', 'cloud'];
+    var fractions = ee.Image(image)
+                      .select(['B2', 'B3', 'B4', 'B8', 'B11', 'B12'])
+                      .unmix(endmembers).max(0)
+                      .multiply(100).byte();
+    
+    fractions = fractions.rename(outBandNames);
+    var summed = fractions.expression('b("gv") + b("npv") + b("soil")');
+    
+    var shade = summed.subtract(100)
+                      .abs().byte().rename("shade");
+    
+    fractions = fractions.addBands(shade);
+    // return ee.Image(fractions.copyProperties(image));
+    return image.addBands(fractions);
+};
+
+// set membership function 
+var membership = function (image){
+    var gv_soil = image.select('gv').addBands(image.select('soil')).reduce(ee.Reducer.sum());
+    
+    var cond_1 = image.select('shade').multiply(0.1).subtract(6.5).clamp(0, 1);
+    var cond_2 = gv_soil.multiply(-0.1).add(1).clamp(0, 1);
+    var cond_3 = image.select('cloud').multiply(-0.1).add(3.5).clamp(0, 1)
+                  .addBands(image.select('cloud').multiply(0.125).clamp(0, 1)  
+                  ).reduce(ee.Reducer.min());
+    
+    var image_prob = cond_1.addBands(cond_2).addBands(cond_3).reduce(ee.Reducer.mean());
+    return image_prob.rename("SWSC");
+};
+
 
 // compute statistics
 // for each year 
@@ -109,11 +143,25 @@ years.forEach(function(year_i) {
       .gt(0);
     
     // read L8 
-    var L8_ij =  collection_L8.filterDate(ee.Date.fromYMD(year_i-1, ee.Number.parse(month_j), 1),
-                                          ee.Date.fromYMD(year_i-1, ee.Number.parse(month_j), 1).advance(1,'month'))
-                        .map(maskL8sr).map(applyScaleFactors)
-                        .median();
-                        print(L8_ij)
+    var L8_ij =  collection_L8
+      .filterDate(ee.Date.fromYMD(year_i, ee.Number.parse(month_j), 1),
+                  ee.Date.fromYMD(year_i, ee.Number.parse(month_j), 1).advance(1,'month'))
+      .map(maskL8sr).map(applyScaleFactors)
+      .median();
+                        
+    // read s2
+    var s2_ij = collection_s2
+      .filterDate(ee.Date.fromYMD(year_i, ee.Number.parse(month_j), 1),
+                  ee.Date.fromYMD(year_i, ee.Number.parse(month_j), 1).advance(1,'month'))                         
+                  .map(maskS2clouds)
+                  .map(sma)
+                  .map(membership)
+                  .median();
+    
+    print(s2_ij)
+                  
+    
+    
 
     
   })
