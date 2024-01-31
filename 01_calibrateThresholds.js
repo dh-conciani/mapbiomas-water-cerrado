@@ -246,6 +246,7 @@ years.forEach(function(year_i) {
         
       // apply spatial filter
       s2Loss = spatialFilter(s2Loss.unmask(), filterParams);
+      s2Loss = s2Loss.updateMask(s2Loss.neq(0));
         
       Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk, false);
 
@@ -269,6 +270,9 @@ years.forEach(function(year_i) {
         // store
         temp_img = temp_img.addBands(s2Gain);
     });
+    
+    // now, compute areas 
+    // first, get bandNames 
   });
 });
 
