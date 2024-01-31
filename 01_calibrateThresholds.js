@@ -1,9 +1,9 @@
-// export statistics to inspect mapbiomas agua sentinel improvement 
-// dhemerson.costa@ipam.org.br 
+// export statistics to calibrate mapbiomas agua sentinel-landsat integration  
+// an adaptation of dhemerson.costa@ipam.org.br from bruno@imazon.org.br codes
 
 // set calibration parameters
-var loss_s2 = [-0.30];
-var gain_s2 = [0.50];
+var loss_s2 = [-0.30, -0.20];
+var gain_s2 = [0.50, 0.60];
 
 // set years
 //var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023];
@@ -173,21 +173,41 @@ years.forEach(function(year_i) {
                     .rename('SWSC Change');
     
     
-    // get different among l8 method and s2
     Map.addLayer(water, {}, 'L8 ' + year_i + ' - ' + month_j);
-    //Map.addLayer(s2Change, {}, 'S2 ' + year_i + ' - ' + month_j);
-                  
+
     // apply thresholds over s2 deltas 
+    // set temp image
+    var temp_img = ee.Image([]);
+    
     // for each loss paramenters
-    // set loss recipe
-    var recipe_loss_temp = ee.FeatureCollection([]);
     loss_s2.forEach(function(loss_ijk) {
-      var s2Loss = s2Change.lte(loss_ijk).selfMask().updateMask(water);
       
-      Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk)
-
+      var s2Loss = s2Change.lte(loss_ijk).selfMask().updateMask(water)
+        // set properties
+        .set({'parameter': 'loss'})
+        .set({'value': loss_ijk})
+        .rename('loss');
+        
+        // store
+        temp_img = temp_img.addBands(s2Loss);
     });
+    
+    // for each gain parameters
+    gain_s2.forEach(function(gain_ijk) {
+      
+      var s2Gain = s2Change.lte(gain_ijk).selfMask().updateMask(water)
+        // set properties
+        .set({'parameter': 'gain'})
+        .set({'value': gain_ijk})
+        .rename('gain');
+        
+        // store
+        temp_img = temp_img.addBands(s2Gain);
+    });
+    
+    print(temp_img)
 
+    //Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk)
     //var s2Gain = swscChange.gte(thrs_gain_s2).selfMask().updateMask(hand_class.lte(1));
     
     
