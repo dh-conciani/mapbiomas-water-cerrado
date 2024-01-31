@@ -2,8 +2,8 @@
 // an adaptation of dhemerson.costa@ipam.org.br from bruno@imazon.org.br codes
 
 // set calibration parameters
-var loss_s2 = [-0.30, -0.20];
-var gain_s2 = [0.50, 0.60];
+var loss_s2 = [-0.30];
+var gain_s2 = [0.50];
 
 // set years
 //var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023];
@@ -55,6 +55,11 @@ var terrain = ee.call('Terrain', srtmBrasil.convolve(gaussianKernel));
 function radians(img) { return img.toFloat().multiply(3.1415927).divide(180); }
 var slope = radians(terrain.select(['slope'])).lt(0.076).clip(biomes_vec.geometry());
 slope = slope.focal_max(pmtro_focal).focal_min(pmtro_focal);
+
+var hand30_1000 =  ee.Image('users/gena/GlobalHAND/30m/hand-1000');
+var expresion = "(b(0) <= 5.3) ? 0 : (b(0) <= 15 && b(0) > 5.3 ) ? 1 : (b(0) > 15 && b(1) == 0 ) ? 2   : (b(0) > 15 && b(1) == 1 ) ? 3 : 0"  
+var hand_class = hand30_1000.addBands(slope).expression(expresion).clip(biomes_vec.geometry());
+
 
 // set s2 cloud mask function
 var maskS2clouds = function (image) {
@@ -188,6 +193,8 @@ years.forEach(function(year_i) {
         .set({'value': loss_ijk})
         .rename('loss');
         
+        Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk);
+
         // store
         temp_img = temp_img.addBands(s2Loss);
     });
@@ -195,19 +202,18 @@ years.forEach(function(year_i) {
     // for each gain parameters
     gain_s2.forEach(function(gain_ijk) {
       
-      var s2Gain = s2Change.lte(gain_ijk).selfMask().updateMask(water)
+      var s2Gain = s2Change.gte(gain_ijk).selfMask().updateMask(hand_class.lte(1))
         // set properties
         .set({'parameter': 'gain'})
         .set({'value': gain_ijk})
         .rename('gain');
         
+        Map.addLayer(s2Gain, {}, 'S2 Gain ' + year_i + ' - ' + month_j + ' - Param. ' + gain_ijk);
+        
         // store
         temp_img = temp_img.addBands(s2Gain);
     });
     
-    print(temp_img)
-
-    //Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk)
     //var s2Gain = swscChange.gte(thrs_gain_s2).selfMask().updateMask(hand_class.lte(1));
     
     
