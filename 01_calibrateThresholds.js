@@ -6,10 +6,12 @@ var loss_s2 = -0.30;
 var gain_s2 = 0.50;
 
 // set years
-var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023];
+//var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023];
+var years = [2022];
 
 // set months
-var months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+//var months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+var months = ['9'];
 
 // set cloud cover
 var cloudCover = 50;
@@ -84,6 +86,23 @@ var maskL8sr = function (image) {
     return image.updateMask(mask);
 };
 
+// compute statistics
+// for each year 
+years.forEach(function(year_i) {
+  // for each month
+  months.forEach(function(month_j) {
+    
+    // read water data
+    var water = ee.ImageCollection('projects/mapbiomas-workspace/TRANSVERSAIS/AGUA5-FT')
+      .filter("version == '11'").filter("cadence == 'monthly'")
+      .filter("year < 2022").select("classification_" + month_j)
+      .filter(ee.Filter.eq("biome", 'CERRADO')).sum()
+      .gt(0)//.selfMask();;
+      print(water)
+
+    
+  })
+})
 
 
 565504
