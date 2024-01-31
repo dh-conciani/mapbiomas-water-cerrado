@@ -2,8 +2,11 @@
 // an adaptation of dhemerson.costa@ipam.org.br from bruno@imazon.org.br codes
 
 // set calibration parameters
-var loss_s2 = [-0.30];
-var gain_s2 = [0.50];
+//var loss_s2 = [-1, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1];
+var loss_s2 = [-0.3];
+
+//var gain_s2 = [1,, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
+var gain_s2 = [0.5];
 
 // set years
 //var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023];
