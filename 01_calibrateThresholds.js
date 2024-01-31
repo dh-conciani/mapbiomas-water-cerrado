@@ -269,18 +269,11 @@ years.forEach(function(year_i) {
         // store
         temp_img = temp_img.addBands(s2Gain);
     });
-    
-    
-    
-
-    
-
-    
-  })
-})
+  });
+});
 
 
-565504
+
 
 // read states 
 //var states = ee.Image('projects/mapbiomas-workspace/AUXILIAR/estados-2016-raster');
