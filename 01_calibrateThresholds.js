@@ -96,7 +96,7 @@ years.forEach(function(year_i) {
     var water = ee.ImageCollection('projects/mapbiomas-workspace/TRANSVERSAIS/AGUA5-FT')
       .filter("version == '11'").filter("cadence == 'monthly'")
       .filter("year < 2022").select("classification_" + month_j)
-      .filter(ee.Filter.eq("biome", 'CERRADO')).sum()
+      .filter(ee.Filter.eq("biome", bioma.toUpperCase())).sum()
       .gt(0)//.selfMask();;
       print(water)
 
