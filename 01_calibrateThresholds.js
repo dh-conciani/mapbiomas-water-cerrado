@@ -229,7 +229,7 @@ years.forEach(function(year_i) {
                     .rename('SWSC Change');
     
     
-    Map.addLayer(water, {}, 'L8 ' + year_i + ' - ' + month_j, false);
+    Map.addLayer(water, {palette:['black']}, 'L8 ' + year_i + ' - ' + month_j, false);
 
     // apply thresholds over s2 deltas 
     // set temp image
@@ -245,10 +245,10 @@ years.forEach(function(year_i) {
         .rename('loss');
         
       // apply spatial filter
+      s2Loss = s2Loss.where(s2Change.gt(-0.15), 0);
       s2Loss = spatialFilter(s2Loss.unmask(), filterParams);
-      s2Loss = s2Loss.updateMask(s2Loss.neq(0));
         
-      Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk, false);
+      Map.addLayer(s2Loss, {palette:['red']}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk, false);
 
       // store
       temp_img = temp_img.addBands(s2Loss);
@@ -265,7 +265,7 @@ years.forEach(function(year_i) {
         .set({'value': gain_ijk})
         .rename('gain');
         
-        Map.addLayer(s2Gain, {}, 'S2 Gain ' + year_i + ' - ' + month_j + ' - Param. ' + gain_ijk, false);
+        Map.addLayer(s2Gain, {palette:['red']}, 'S2 Gain ' + year_i + ' - ' + month_j + ' - Param. ' + gain_ijk, false);
         
         // store
         temp_img = temp_img.addBands(s2Gain);
