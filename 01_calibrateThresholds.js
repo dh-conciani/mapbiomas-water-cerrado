@@ -106,8 +106,14 @@ years.forEach(function(year_i) {
       .filter("version == '11'").filter("cadence == 'monthly'")
       .filter("year < 2022").select("classification_" + month_j)
       .filter(ee.Filter.eq("biome", bioma.toUpperCase())).sum()
-      .gt(0)//.selfMask();;
-      print(water)
+      .gt(0);
+    
+    // read L8 
+    var L8_ij =  collection_L8.filterDate(ee.Date.fromYMD(year_i-1, ee.Number.parse(month_j), 1),
+                                          ee.Date.fromYMD(year_i-1, ee.Number.parse(month_j), 1).advance(1,'month'))
+                        .map(maskL8sr).map(applyScaleFactors)
+                        .median();
+                        print(L8_ij)
 
     
   })
