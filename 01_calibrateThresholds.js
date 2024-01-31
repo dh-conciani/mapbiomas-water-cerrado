@@ -86,6 +86,15 @@ var maskL8sr = function (image) {
     return image.updateMask(mask);
 };
 
+// Applies scaling factors in S2
+function applyScaleFactors(image) {
+    var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+    var thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0);
+    return image.addBands(opticalBands, null, true)
+                .addBands(thermalBands, null, true);
+}
+  
+
 // compute statistics
 // for each year 
 years.forEach(function(year_i) {
