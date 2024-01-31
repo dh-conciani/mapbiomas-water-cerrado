@@ -6,10 +6,10 @@ var exportStats = true;
 
 // set calibration parameters
 //var loss_s2 = [-1, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1];
-var loss_s2 = [-0.1];
+var loss_s2 = [-0.3];
 
 //var gain_s2 = [1,, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
-var gain_s2 = [0.1];
+var gain_s2 = [0.5];
 
 // set years
 //var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023];
@@ -17,7 +17,7 @@ var years = [2023];
 
 // set months
 //var months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-var months = ['9'];
+var months = ['8'];
 
 // set cloud cover
 var cloudCover = 50;
