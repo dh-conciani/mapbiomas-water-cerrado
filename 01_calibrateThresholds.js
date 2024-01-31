@@ -178,7 +178,7 @@ years.forEach(function(year_i) {
                     .rename('SWSC Change');
     
     
-    Map.addLayer(water, {}, 'L8 ' + year_i + ' - ' + month_j);
+    Map.addLayer(water, {}, 'L8 ' + year_i + ' - ' + month_j, false);
 
     // apply thresholds over s2 deltas 
     // set temp image
@@ -193,7 +193,7 @@ years.forEach(function(year_i) {
         .set({'value': loss_ijk})
         .rename('loss');
         
-        Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk);
+        Map.addLayer(s2Loss, {}, 'S2 Loss ' + year_i + ' - ' + month_j + ' - Param. ' + loss_ijk, false);
 
         // store
         temp_img = temp_img.addBands(s2Loss);
@@ -203,12 +203,14 @@ years.forEach(function(year_i) {
     gain_s2.forEach(function(gain_ijk) {
       
       var s2Gain = s2Change.gte(gain_ijk).selfMask().updateMask(hand_class.lte(1))
+        // retain only gains different of already classified by L8
+        .updateMask(water.unmask(0).neq(1))
         // set properties
         .set({'parameter': 'gain'})
         .set({'value': gain_ijk})
         .rename('gain');
         
-        Map.addLayer(s2Gain, {}, 'S2 Gain ' + year_i + ' - ' + month_j + ' - Param. ' + gain_ijk);
+        Map.addLayer(s2Gain, {}, 'S2 Gain ' + year_i + ' - ' + month_j + ' - Param. ' + gain_ijk, false);
         
         // store
         temp_img = temp_img.addBands(s2Gain);
