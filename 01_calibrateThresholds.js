@@ -1,15 +1,15 @@
 // export statistics to calibrate mapbiomas agua sentinel-landsat integration  
 // an adaptation of dhemerson.costa@ipam.org.br from bruno@imazon.org.br codes
 
-// you want to exprt statistics? (using multiple params/yearsd/months can crash your code)
+// you want to exprt statistics? (per month~year)
 var exportStats = true;
 
 // set calibration parameters
 //var loss_s2 = [-1, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1];
-var loss_s2 = [-0.3];
+var loss_s2 = [-0.1];
 
 //var gain_s2 = [1,, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
-var gain_s2 = [0.5];
+var gain_s2 = [0.1];
 
 // set years
 //var years = [2017, 2018, 2019, 2020, 2021, 2022, 2023];
@@ -23,11 +23,12 @@ var months = ['9'];
 var cloudCover = 50;
 
 // set biome id
+// 'Amazônia', 'Caatinga', 'Cerrado', 'Mata Atlântica', 'Pampa', 'Pantanal'
 var bioma = 'Cerrado';
 
 // read biomes
 var biomes_vec = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas-2019')
-  .filter(ee.Filter.eq('Bioma', bioma));
+  .filter(ee.Filter.eq('Bioma', bioma))
 
 // read states to compute statsitics
 var territory = ee.Image('projects/mapbiomas-workspace/AUXILIAR/estados-2016-raster')
@@ -280,88 +281,95 @@ years.forEach(function(year_i) {
     
     // export statistics 
     if (exportStats === true) {
+      
+      // change the scale if you need.
+      var scale = 30;
+      
+      // define a Google Drive output folder 
+      var driverFolder = 'PIXEL-SOURCE';
+                      
+      // Image area in hectares
+      var pixelArea = ee.Image.pixelArea().divide(10000);
+      
       // build recipe
       var recipe = ee.FeatureCollection([]);
       
-      // compute areas
-      temp_img.bandNames().getInfo().forEach(function(stringName) {
+      // Geometry to export
+      var geometry = water.geometry();
         
-        // Geometry to export
-        var geometry = source.geometry();
-        
-        // convert a complex object to a simple feature collection 
-        var convert2table = function (obj) {
-          obj = ee.Dictionary(obj);
-            var territory = obj.get('territory');
-            var classesAndAreas = ee.List(obj.get('groups'));
+      // convert a complex object to a simple feature collection 
+      var convert2table = function (obj) {
+        obj = ee.Dictionary(obj);
+          var territory = obj.get('territory');
+          var classesAndAreas = ee.List(obj.get('groups'));
             
-            var tableRows = classesAndAreas.map(
-                function (classAndArea) {
-                    classAndArea = ee.Dictionary(classAndArea);
-                    var classId = classAndArea.get('class');
-                    var area = classAndArea.get('sum');
-                    var tableColumns = ee.Feature(null)
-                        .set('state', territory)
-                        .set('class', classId)
-                        .set('area', area)
-                        .set('year', year_i)
-                        .set('month', month_j)
-                    return tableColumns;
-                }
-            );
-        
-            return ee.FeatureCollection(ee.List(tableRows));
-        };
-        
-        // compute the area
-        var calculateArea = function (image, territory, geometry) {
-            var territotiesData = pixelArea.addBands(territory).addBands(image)
-                .reduceRegion({
-                    reducer: ee.Reducer.sum().group(1, 'class').group(1, 'territory'),
-                    geometry: geometry,
-                    scale: scale,
-                    maxPixels: 1e12
-                });
-                
-            territotiesData = ee.List(territotiesData.get('groups'));
-            var areas = territotiesData.map(convert2table);
-            areas = ee.FeatureCollection(areas).flatten();
-            return areas;
-        };
-        
+          var tableRows = classesAndAreas.map(
+              function (classAndArea) {
+                  classAndArea = ee.Dictionary(classAndArea);
+                  var classId = classAndArea.get('class');
+                  var area = classAndArea.get('sum');
+                  var tableColumns = ee.Feature(null)
+                      .set('state', territory)
+                      .set('class', classId)
+                      .set('area', area)
+                      .set('year', year_i)
+                      .set('month', month_j)
+                  return tableColumns;
+              }
+          );
+      
+          return ee.FeatureCollection(ee.List(tableRows));
+      };
+      
+      // compute the area
+      var calculateArea = function (image, territory, geometry) {
+          var territotiesData = pixelArea.addBands(territory).addBands(image)
+              .reduceRegion({
+                  reducer: ee.Reducer.sum().group(1, 'class').group(1, 'territory'),
+                  geometry: geometry,
+                  scale: scale,
+                  maxPixels: 1e12
+              });
+              
+          territotiesData = ee.List(territotiesData.get('groups'));
+          var areas = territotiesData.map(convert2table);
+          areas = ee.FeatureCollection(areas).flatten();
+          return areas;
+      };
+      
+      print(temp_img.bandNames())
       // perform per year 
-        var areas = bands.map(
+      var areas = temp_img.bandNames().map(
             function (band_i) {
-                var image = source.select(band_i)
-                
-                var areas = calculateArea(image, territory, geometry);
-                // set additional properties
-                areas = areas.map(
-                    function (feature) {
-                        return feature.set('bandName', band_i)
-                                      .set('parameter', image.get('parameter'))
-                                      .set('paramId', image.get('value'));
-                    }
-                );
-                return areas;
-            }
-        );
-        
-        // apply function
-        areas = ee.FeatureCollection(areas).flatten();
-        // store
-        recipe = recipe.merge(areas);
-        
-        // export all parameters for a year~month in a unique CSV
-        
-        // export 
-        Export.table.toDrive({
-              collection: recipe,
-              description: 'watercalib_' + year_i + '_' + month_j,
-              folder: driverFolder,
-              fileFormat: 'CSV'
-        });
-      }); 
+              var image = temp_img.select(ee.List(band_i))
+              
+              var areas = calculateArea(image, territory, geometry);
+              // set additional properties
+              areas = areas.map(
+                  function (feature) {
+                      return feature.set('bandName', band_i)
+                                    .set('parameter', image.get('parameter'))
+                                    .set('paramId', image.get('value'));
+                  }
+              );
+              return areas;
+          }
+      );
+      
+      // apply function
+      areas = ee.FeatureCollection(areas).flatten();
+      // store
+      recipe = recipe.merge(areas);
+      
+      // export all parameters for a year~month in a unique CSV
+      
+      // export 
+      Export.table.toDrive({
+            collection: recipe,
+            description: 'waterCalib_' + year_i + '_' + month_j,
+            folder: driverFolder,
+            fileFormat: 'CSV'
+      });
     }
   });
 });
