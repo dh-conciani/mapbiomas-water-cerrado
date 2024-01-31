@@ -265,7 +265,7 @@ years.forEach(function(year_i) {
         .set({'value': gain_ijk})
         .rename('gain');
         
-        Map.addLayer(s2Gain, {palette:['red']}, 'S2 Gain ' + year_i + ' - ' + month_j + ' - Param. ' + gain_ijk, false);
+        Map.addLayer(s2Gain, {palette:['blue']}, 'S2 Gain ' + year_i + ' - ' + month_j + ' - Param. ' + gain_ijk, false);
         
         // store
         temp_img = temp_img.addBands(s2Gain);
