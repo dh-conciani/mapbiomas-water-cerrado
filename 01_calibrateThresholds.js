@@ -138,9 +138,10 @@ years.forEach(function(year_i) {
     // read water data
     var water = ee.ImageCollection('projects/mapbiomas-workspace/TRANSVERSAIS/AGUA5-FT')
       .filter("version == '11'").filter("cadence == 'monthly'")
-      .filter("year < 2022").select("classification_" + month_j)
+      .filter("year == " + year_i).select("classification_" + month_j)
       .filter(ee.Filter.eq("biome", bioma.toUpperCase())).sum()
       .gt(0);
+      Map.addLayer(water)
     
     // read L8 
     var L8_ij =  collection_L8
