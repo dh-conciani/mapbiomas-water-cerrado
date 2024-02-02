@@ -1,7 +1,7 @@
 // export statistics to calibrate mapbiomas agua sentinel-landsat integration  
 // an adaptation of dhemerson.costa@ipam.org.br from bruno@imazon.org.br codes
 
-// export statistics? (per month~year)
+// you want to exprt statistics? (per month~year)
 var exportStats = true;
 
 // set calibration parameters
@@ -17,7 +17,7 @@ var years = [2023];
 
 // set months
 //var months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-var months = ['8'];
+var months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 
 // set cloud cover
 var cloudCover = 50;
@@ -364,7 +364,7 @@ years.forEach(function(year_i) {
       // export all parameters for a year~month in a unique CSV
       Export.table.toDrive({
             collection: recipe,
-            description: 'waterCalib_' + year_i + '_' + month_j,
+            description: 'waterCalib_' + year_i + '_' + month_j + '_v2',
             folder: driverFolder,
             fileFormat: 'CSV'
       });
