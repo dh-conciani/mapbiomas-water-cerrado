@@ -175,7 +175,7 @@ var yearsList = [
 */
 
 // needs to create a conditional for 2023 (uses 2022 fp)
-var yearsList = [2021, 2022, 2023];
+var yearsList = [2023];
 
 // set years to be processed
 var monthList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -253,14 +253,29 @@ yearsList.forEach(function(year_i) {
         );
       
     // store into recipe 
-    recipe = recipe.addBands(final_img_month);
-      
+    //recipe = recipe.addBands(final_img_month);
+    
+    // insert metadata
+    final_img_month = final_img_month.set({'year': year_i})
+                                     .set({'month': month_j})
+                                     .set({'version': output_version});
+                                     
+    Export.image.toAsset({
+      "image": final_img_month.toInt8(),
+      "description": 'CERRADO-' + year_i + '-' + month_j + '_v' + output_version,
+      "assetId": output_asset + 'CERRADO-' + year_i + '-' + month_j + '_v' + output_version,
+      "scale": 30,
+      "pyramidingPolicy": {
+          '.default': 'mode'
+      },
+      "maxPixels": 1e13,
+      "region": cerrado_vec.geometry()
+      });  
+    
     });
-  
-  // insert metadata
-  recipe = recipe.set({'year': year_i})
-                 .set({'version': output_version});
-  
+    
+
+  /*
    // export to workspace asset
   Export.image.toAsset({
       "image": recipe.toInt8(),
@@ -273,6 +288,8 @@ yearsList.forEach(function(year_i) {
       "maxPixels": 1e13,
       "region": cerrado_vec.geometry()
   });  
+  */
+  
 });
 
 
