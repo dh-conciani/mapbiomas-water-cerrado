@@ -105,7 +105,7 @@ var cloudScore = function (image) {
   };
   
 var process_image = function (image) {
-    return sma(image.clip(geometry_teste));
+    return sma(image);
   };
 
 var rename_bands = function (imgCol, input) {
@@ -117,7 +117,11 @@ var l7_ready = rename_bands(l7_col_2, bands_l7_2).map(process_image);
 var l8_ready = rename_bands(l8_col_2, bands_l8_2).map(process_image);
 var l9_ready = rename_bands(l9_col_2, bands_l9_2).map(process_image);
 
-var collectionLandsat = l5_ready.merge(l7_ready).merge(l8_ready).filterBounds(geometry_teste).filter(ee.Filter.lte('CLOUD_COVER', 70)).map(cloudScore);
+// read biomes
+var cerrado_vec = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas-2019')
+  .filterMetadata('Bioma', 'equals', 'Cerrado');
+
+var collectionLandsat = l5_ready.merge(l7_ready).merge(l8_ready).filterBounds(cerrado_vec).filter(ee.Filter.lte('CLOUD_COVER', 70)).map(cloudScore);
 var modules =  require('users/brunoferreira/gtagua_base:module_mapbiomas_agua_2022_moving_window_4');
 var p_img_month_func = modules.p_img_month_func;
 
@@ -132,6 +136,8 @@ var color_prob = ['a50026','d73027','f46d43','fdae61','fee090','ffffbf','e0f3f8'
 var fp_collection = ee.ImageCollection("projects/mapbiomas-workspace/AMOSTRAS/GTAGUA/OBJETOS/CLASSIFICADOS/TESTE_1_raster")
   .filter(ee.Filter.eq("version", "2"))
   .filter(ee.Filter.eq("biome", 'CERRADO'));
+  
+///// ** insert conditional for 2023 (uses 2022 fp)
 
 print('false-positive collection', fp_collection);
 
@@ -178,45 +184,44 @@ yearsList.forEach(function(year_i) {
   var fp_i = fp_collection.filterMetadata('year', 'equals', year_i).mosaic().eq(5).selfMask();  
   var water_i = water_collection.filterMetadata('year', 'equals', year_i);     
   
-  Map.addLayer(fp_i.randomVisualizer(), {}, 'fp ' + year_i, false);
+  //Map.addLayer(fp_i, {palette: ['red'], min:1, max:1}, 'fp ' + year_i);
   //Map.addLayer(water_i, {}, 'water ' + year_i, false);
+  
+  // get unique ids for false positives
+  var fp_i_id = fp_i.connectedComponents({
+    connectedness: ee.Kernel.plus(1),
+    maxSize: 128
+    }).reproject('EPSG:4326', null, 30);
+  
+  Map.addLayer(fp_i_id.randomVisualizer(), {}, 'false-positive IDs ' + year_i);
+
   
   // for each month 
   monthList.forEach(function(month_j) {
     // get water for year i & month j
     var water_ij = water_i.select('w_' + month_j).mosaic().updateMask(limit.eq(4)).selfMask();
-    
     Map.addLayer(water_ij, {palette: ['blue'], min:1, max:1}, 'water ' + year_i  + '-' + month_j);
-    print(water_ij)
-  })
+    
+    // get memberships 
+    var membership_ij = p_img_month_func(year_i, month_j, collectionLandsat).updateMask(limit.eq(4));
+    Map.addLayer(membership_ij, {palette:color_prob, min:0, max:1}, "membership  " + year_i  + '-' + month_j);
+    
+    
+
+  });
   
-})
+});
 
 /*
 
 
 monthList.forEach(function(month_i) {
   
-  var pronMensal = p_img_month_func(2023, month_i, collectionLandsat);
+  var ;
 
-  Map.addLayer(pronMensal, {palette:color_prob, min:0, max:1}, "Membership mensal " + month_i);
 
-  // get data for year [i]
-  var data_i = collection.filter(ee.Filter.eq('year', year)).mosaic();
+
   
-  // get only water surface
-  var surface_i = ee.Image("projects/mapbiomas-workspace/TRANSVERSAIS/GTAGUA/2023/ITERATION3/iteration_3_2023_T12")
-                  .select("w_" + month_i).updateMask(limit.eq(4)).selfMask();
-  
-  // get only fp
-  //var fp_i = data_i.min().eq(5).selfMask();
-  var fp_i = data_i.eq(5).selfMask();
-
-  // get unique ids for false positives
-  var fp_id = fp_i.connectedComponents({
-    connectedness: ee.Kernel.plus(1),
-    maxSize: 128
-    }).reproject('EPSG:4326', null, 30);
   
   // get buffer from water surface
   var surface_iBuffer = surface_i.distance(ee.Kernel.euclidean(30, 'meters'), false).selfMask();
