@@ -167,14 +167,28 @@ var yearsList = [
 var yearsList = [2022];
 
 // set years to be processed
-var monthList = [7,10];
+var monthList = [9];
 
 // set empty image
 var recipe = ee.Image([]);
 
 // for each year
 yearsList.forEach(function(year_i) {
-  // get false positiv for the year i
+  // get data for the year i
+  var fp_i = fp_collection.filterMetadata('year', 'equals', year_i).mosaic().eq(5).selfMask();  
+  var water_i = water_collection.filterMetadata('year', 'equals', year_i);     
+  
+  Map.addLayer(fp_i.randomVisualizer(), {}, 'fp ' + year_i, false);
+  //Map.addLayer(water_i, {}, 'water ' + year_i, false);
+  
+  // for each month 
+  monthList.forEach(function(month_j) {
+    // get water for year i & month j
+    var water_ij = water_i.select('w_' + month_j).mosaic().updateMask(limit.eq(4)).selfMask();
+    
+    Map.addLayer(water_ij, {palette: ['blue'], min:1, max:1}, 'water ' + year_i  + '-' + month_j);
+    print(water_ij)
+  })
   
 })
 
