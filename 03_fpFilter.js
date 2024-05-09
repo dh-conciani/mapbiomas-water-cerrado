@@ -1,3 +1,8 @@
+// set output params
+var output_asset = 'projects/mapbiomas-workspace/COLECAO_DEV/COLECAO9_DEV/CERRADO/AGUA-COL3/';
+var output_version = '1';
+
+////////////////////////////////////////////////////////////////
 var l5_col_2 = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2');
 var l7_col_2 = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2');    
 l7_col_2 = l7_col_2.filterDate('1995-01-01', '2012-12-31');
@@ -136,7 +141,7 @@ var color_prob = ['a50026','d73027','f46d43','fdae61','fee090','ffffbf','e0f3f8'
 var fp_collection = ee.ImageCollection("projects/mapbiomas-workspace/AMOSTRAS/GTAGUA/OBJETOS/CLASSIFICADOS/TESTE_1_raster")
   .filter(ee.Filter.eq("version", "2"))
   .filter(ee.Filter.eq("biome", 'CERRADO'));
-  
+
 ///// ** insert conditional for 2023 (uses 2022 fp)
 
 print('false-positive collection', fp_collection);
@@ -170,18 +175,23 @@ var yearsList = [
 */
 
 // needs to create a conditional for 2023 (uses 2022 fp)
-var yearsList = [2022];
+var yearsList = [2021, 2022, 2023];
 
 // set years to be processed
-var monthList = [9];
-
-// set empty image
-var recipe = ee.Image([]);
+var monthList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 // for each year
 yearsList.forEach(function(year_i) {
   // get data for the year i
-  var fp_i = fp_collection.filterMetadata('year', 'equals', year_i).mosaic().eq(5).selfMask();  
+    if (year_i < 2023) {
+      var fp_i = fp_collection.filterMetadata('year', 'equals', year_i).mosaic().eq(5).selfMask();  
+  }
+  
+  // ** add exception when year is 2023 (uses 2022 fp data)
+  if (year_i === 2023) {
+      var fp_i = fp_collection.filterMetadata('year', 'equals', 2022).mosaic().eq(5).selfMask();  
+  }
+  
   var water_i = water_collection.filterMetadata('year', 'equals', year_i);     
   
   //Map.addLayer(fp_i, {palette: ['red'], min:1, max:1}, 'fp ' + year_i);
@@ -193,89 +203,76 @@ yearsList.forEach(function(year_i) {
     maxSize: 128
     }).reproject('EPSG:4326', null, 30);
   
-  Map.addLayer(fp_i_id.randomVisualizer(), {}, 'false-positive IDs ' + year_i);
-
+  //Map.addLayer(fp_i_id.randomVisualizer(), {}, 'false-positive IDs ' + year_i);
+  
+  // build a container
+  var recipe = ee.Image([]);
   
   // for each month 
   monthList.forEach(function(month_j) {
     // get water for year i & month j
     var water_ij = water_i.select('w_' + month_j).mosaic().updateMask(limit.eq(4)).selfMask();
-    Map.addLayer(water_ij, {palette: ['blue'], min:1, max:1}, 'water ' + year_i  + '-' + month_j);
+    //Map.addLayer(water_ij, {palette: ['blue'], min:1, max:1}, 'water ' + year_i  + '-' + month_j);
     
     // get memberships 
     var membership_ij = p_img_month_func(year_i, month_j, collectionLandsat).updateMask(limit.eq(4));
-    Map.addLayer(membership_ij, {palette:color_prob, min:0, max:1}, "membership  " + year_i  + '-' + month_j);
+    //Map.addLayer(membership_ij, {palette:color_prob, min:0, max:1}, "membership  " + year_i  + '-' + month_j);
     
+    // get buffer from water surface
+    var water_ij_buffer = water_ij.distance(ee.Kernel.euclidean(30, 'meters'), false).selfMask();
     
-
-  });
-  
-});
-
-/*
-
-
-monthList.forEach(function(month_i) {
-  
-  var ;
-
-
-
-  
-  
-  // get buffer from water surface
-  var surface_iBuffer = surface_i.distance(ee.Kernel.euclidean(30, 'meters'), false).selfMask();
-  
-  // mask false positive Ids
-  var Ids = fp_id.updateMask(surface_iBuffer)
-      .select('labels'); // Seleciona apenas a banda de rótulos dos IDs
-  
-    //Map.addLayer(data_i.randomVisualizer(), {}, 'all', false);
-  Map.addLayer(surface_iBuffer, {palette: ['blue'], min:1, max:1}, 'water surface ' + month_i);
-  Map.addLayer(fp_id.randomVisualizer(), {}, 'false-positive IDs ' + month_i);
-  //Map.addLayer(Ids.randomVisualizer(), {}, 'IDs to retain');
-
-  // proximos passsos
-  // 1- recuperar a lista de ids no objeto 'Ids' 
-  // 2- filtrar o objeto 'fp_id' e reter apenas os valores que existirem no objeto 'Ids'
-  // 3- fazer um blend entre o objeto filtrado e o objeto 'surface_i'
-
-  // Cálculo da tabela de IDs
-  var ids_table = Ids.select('labels').reduceRegion({
-    reducer: ee.Reducer.frequencyHistogram(),
-    geometry: geometry_teste,
-    // geometry: geometry_cerrado,
-    scale: 30,
-    maxPixels: 1e13,
-  });
-  
-  var ids = ee.Dictionary(ids_table.get('labels')).keys();
-  
-  var ids_blend = ee.ImageCollection(ids.map(function(id){
-      var new_image = fp_id.select('labels').eq(ee.Number.parse(id)).where(pronMensal.lt(0.5),0).selfMask();
-      return new_image;
-  })).mosaic();
-  
-  // Adiciona a camada de visualização dos IDs blend
-  Map.addLayer(ids_blend,{palette:['ff0000']},'ids_blend');
-  
-  // Máscara final: blend entre a superfície de água original e os IDs blend
-  var final_img_year = surface_i
-    .addBands(ids_blend)
-    .reduce("max")
-    .rename(
-      //data_i.bandNames()
-      'classification'
+    // mask false positive Ids that overlaps surface water  
+    var ids_ij = fp_i_id.updateMask(water_ij_buffer).select('labels');
+    
+    // get id names as a list 
+    var ids_ij_table = ids_ij.select('labels').reduceRegion({
+      reducer: ee.Reducer.frequencyHistogram(),
+      geometry: cerrado_vec,
+      scale: 30,
+      maxPixels: 1e13}
       );
+    
+    // store in a dictionary 
+    var ids = ee.Dictionary(ids_ij_table.get('labels')).keys();
+    
+    // retain only pixels from ids that overlaps water surface and satisfies membership criteria 
+    var ids_blend = ee.ImageCollection(ids.map(function(id){
+          return fp_i_id.select('labels').eq(ee.Number.parse(id)).where(membership_ij.lt(0.5),0).selfMask();
+    })).mosaic();
+    
+    // :o
+    //Map.addLayer(ids_blend.randomVisualizer(), {}, 'toBlend');
+    
+    // combine filtered fps and surface water 
+    var final_img_month = water_ij
+      .addBands(ids_blend)
+      .reduce("max")
+      .rename(
+        //data_i.bandNames()
+        'w_' + month_j
+        );
+      
+    // store into recipe 
+    recipe = recipe.addBands(final_img_month);
+      
+    });
   
-  // Adiciona a camada de visualização da imagem final do ano
-  Map.addLayer(final_img_year,{palette:['404080']},'final_img_year');
+  // insert metadata
+  recipe = recipe.set({'year': year_i})
+                 .set({'version': output_version});
   
-  // final guardar resultado na saida 'recipe' 
-  recipe = recipe.addBands(final_img_year);
+   // export to workspace asset
+  Export.image.toAsset({
+      "image": recipe.toInt8(),
+      "description": 'CERRADO-' + year_i + '_v' + output_version,
+      "assetId": output_asset + 'CERRADO-' + year_i + '_v' + output_version,
+      "scale": 30,
+      "pyramidingPolicy": {
+          '.default': 'mode'
+      },
+      "maxPixels": 1e13,
+      "region": cerrado_vec.geometry()
+  });  
 });
 
 
-print(recipe)
-
-*/
