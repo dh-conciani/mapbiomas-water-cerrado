@@ -147,10 +147,9 @@ var water_collection = water0.merge(water1);
 // standardize bandnames
 water_collection = water_collection.map(function(image) {
   return image.rename('w_1', 'w_2', 'w_3', 'w_4', 'w_5', 'w_6', 'w_7', 'w_8', 'w_9', 'w_10', 'w_11', 'w_12');
-})
+});
 
 print('water collection', water_collection);
-
 
 // cerrado mask
 var limit = ee.Image("projects/mapbiomas-workspace/AUXILIAR/biomas-2019-raster");
@@ -179,7 +178,7 @@ yearsList.forEach(function(year_i) {
   
 })
 
-
+/*
 
 
 monthList.forEach(function(month_i) {
@@ -259,3 +258,5 @@ monthList.forEach(function(month_i) {
 
 
 print(recipe)
+
+*/
